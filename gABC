@@ -1,4 +1,4 @@
-# The Generalized Activity-By-Contact (gABC) Model — Full Methodology Explained in Simple Terms
+# The Generalized Activity-By-Contact (gABC) Model; Full Methodology Explained in Simple Terms
 
 *Based on: Hecker, Behjati Ardakani, Karollus, Gagneur, Schulz (2023). "The adapted Activity-By-Contact model for enhancer–gene assignment and its application to single-cell data." Bioinformatics 39(2), btad062.*
 
@@ -22,8 +22,8 @@ The idea behind ABC is intuitive:
 
 So for every enhancer *r* and every candidate gene *g* near it, you multiply:
 
-- **Activity of the enhancer (A_r)** — a number representing how "on" that enhancer is
-- **Contact frequency (C_r,g)** — a number representing how often that enhancer physically touches gene g's promoter
+- **Activity of the enhancer (A_r)**; a number representing how "on" that enhancer is
+- **Contact frequency (C_r,g)**; a number representing how often that enhancer physically touches gene g's promoter
 
 And then you compare this product to the same product summed over **all** the other enhancers that could plausibly regulate that same gene (all enhancers within a defined window around the gene, called *R_g*). This turns it into a relative score — basically "what fraction of gene g's total regulatory input comes from enhancer r?"
 
@@ -37,7 +37,7 @@ ABC(r, g)  =  ─────────────────────
 
 In plain words: *(this enhancer's activity × its contact with the gene) divided by (the sum of activity × contact for every candidate enhancer of that gene)*.
 
-Because of the division, all the ABC scores for a given gene's candidate enhancers **add up to 1** — like slicing a pie. In practice, researchers pick a cutoff score (e.g., 0.02) and call anything above that cutoff a "real" enhancer-gene link.
+Because of the division, all the ABC scores for a given gene's candidate enhancers **add up to 1**; like slicing a pie. In practice, researchers pick a cutoff score (e.g., 0.02) and call anything above that cutoff a "real" enhancer-gene link.
 
 **What goes into A_r (activity)?** Any of these read-count-based measurements at the enhancer region:
 - DNase-seq (measures open/accessible chromatin)
@@ -46,7 +46,7 @@ Because of the division, all the ABC scores for a given gene's candidate enhance
 
 The original Fulco et al. version required **both** DNase-seq AND H3K27ac ChIP-seq together (the activity value for two-assay use is usually the *geometric mean* of the two read counts).
 
-**What goes into C_r,g (contact)?** Usually a **Hi-C matrix** — a genome-wide map of how often every pair of DNA regions touches each other in 3D, measured experimentally. This can be:
+**What goes into C_r,g (contact)?** Usually a **Hi-C matrix** a genome-wide map of how often every pair of DNA regions touches each other in 3D, measured experimentally. This can be:
 - A cell-type-specific Hi-C matrix (best but not always available)
 - A Hi-C matrix averaged across many cell types (used when cell-type-specific data isn't available)
 - A purely mathematical estimate based on the "fractal globule" model, which just assumes contact frequency decreases with linear genomic distance (used when no Hi-C data at all is available)
@@ -129,15 +129,15 @@ gABC_r,g  =  ──────────────────────�
 
 In plain words: instead of computing one activity-times-contact value per enhancer-gene pair, you compute one for **each TSS** of the gene, and add them all up (both in the numerator, for the specific enhancer r, and in the denominator, across all candidate enhancers i for that gene). This lets an enhancer that happens to be positioned near a lesser-used alternative TSS still get proper credit, instead of being penalized just because it doesn't touch the "main" TSS.
 
-**This final equation — combining both fixes — is the official gABC score formula.**
+**This final equation, combining both fixes, is the official gABC score formula.**
 
 ---
 
 ## 6. What the actual "normalized Hi-C contact" value is
 
-The paper doesn't invent a new contact metric — it uses the same Hi-C-derived contact frequency idea as the original ABC model, just applied per TSS instead of per gene as a whole. Practically:
+The paper doesn't invent a new contact metric, it uses the same Hi-C-derived contact frequency idea as the original ABC model, just applied per TSS instead of per gene as a whole. Practically:
 
-1. Start with a **Hi-C contact matrix** — think of this as a giant table where rows and columns are small genomic bins (e.g., 5 kilobase (kb) windows across the whole genome), and each cell in the table records how frequently those two bins were found physically touching, based on sequencing reads from a Hi-C experiment.
+1. Start with a **Hi-C contact matrix**; think of this as a giant table where rows and columns are small genomic bins (e.g., 5 kilobase (kb) windows across the whole genome), and each cell in the table records how frequently those two bins were found physically touching, based on sequencing reads from a Hi-C experiment.
 2. This raw matrix gets **normalized** using standard Hi-C processing methods (accounting for things like sequencing depth and genomic distance biases) — this is standard practice and not something unique to this paper; they used a **K562 Hi-C matrix at 5 kb resolution** (from Rao et al. 2014) as their primary contact source.
 3. For a given enhancer-TSS pair, C_r,t is simply the value read out of this normalized matrix at the bin corresponding to the enhancer's location and the bin corresponding to the TSS's location.
 4. A small **pseudocount** is added to every contact value (so that a true-zero measurement doesn't remove a candidate enhancer from consideration entirely — see the Supplementary Material referenced in the paper for the exact pseudocount value used).
@@ -149,7 +149,7 @@ The paper doesn't invent a new contact metric — it uses the same Hi-C-derived 
 
 ## 7. How the enhancer activity value (A_r) is actually computed
 
-The activity term isn't some abstract number either — it's a normalized sequencing read count:
+The activity term isn't some abstract number either, it's a normalized sequencing read count:
 
 - For **DNase-seq**, **ATAC-seq**, or **H3K27ac ChIP-seq**, you count how many sequencing reads from that assay fall inside the candidate enhancer region.
 - When **two assays are combined** (as in the original ABC model's default setup), the activity is the **geometric mean** of the two normalized read counts (e.g., geometric mean of DNase-seq reads and H3K27ac ChIP-seq reads in that region).
@@ -161,10 +161,10 @@ The activity term isn't some abstract number either — it's a normalized sequen
 
 The gABC score alone tells you *which enhancers regulate which genes*. But the paper goes one step further with a companion pipeline called **STARE**, which asks: *given those enhancer-gene links, which transcription factors (TFs) are likely driving the regulation of each gene?*
 
-**Step 1 — quantify TF binding affinity within each enhancer.**
+**Step 1; quantify TF binding affinity within each enhancer.**
 Instead of calling hard "TF binds here / doesn't bind here" decisions (which requires setting an arbitrary threshold and throws away information about weak-but-real binding), STARE uses a tool called **TRAP**, which computes a continuous **binding affinity** score for each TF at each position in a DNA sequence, based on a biophysical model of how well the TF's known binding motif matches that sequence. Higher affinity = more likely the TF physically binds there. The paper used a curated set of **818 human TF motifs** (position frequency matrices) pooled from three motif databases (JASPAR 2022, HOCOMOCO v11, and Kheradpour & Kellis 2014).
 
-**Step 2 — summarize TF affinity at the gene level, combining it with the enhancer-gene link scores.**
+**Step 2; summarize TF affinity at the gene level, combining it with the enhancer-gene link scores.**
 Two summarization formulas are used, depending on whether the underlying enhancer-gene link was found using the **gABC score** or via a simpler **fixed-window approach** (just taking every open region within a set window of the gene, without any activity/contact weighting).
 
 **(a) Window-based summarization (simpler baseline approach):**
@@ -200,12 +200,12 @@ af_g,tf = Σ  ─────── ·   {
 
 There's a parallel version of this formula for when the plain (non-generalized) ABC score was used to define the enhancer-gene links instead of gABC — in that case, for the "otherwise" (>2500 bp) case, the formula divides the enhancer's activity by the maximum observed contact value across all region-gene pairs (C_max), so that both scaling factors for activity stay bounded between 0 and 1, matching the same overall logic just using the plain ABC-style contact normalization instead of the gABC-style gene-specific one.
 
-**Step 3 — three additional gene-level features are also recorded**, since the authors found (citing their earlier work, Schmidt & Schulz 2019) that these are independently predictive of gene expression:
+**Step 3 three additional gene-level features are also recorded**, since the authors found (citing their earlier work, Schmidt & Schulz 2019) that these are independently predictive of gene expression:
 1. The number of regulatory regions assigned to a gene
 2. The average distance of those regions to the TSS
 3. The average base-pair length of those regions
 
-**Step 4 — feed all of this into a gene expression prediction model.**
+**Step 4 feed all of this into a gene expression prediction model.**
 The gene-level TF affinity matrix (genes × TFs) plus the three extra features are used as input to a tool called **INVOKE**, which fits a linear regression model to predict gene expression from TF affinity scores, and automatically selects which TFs are most predictive.
 
 ---
@@ -271,7 +271,7 @@ Result: gABC achieved higher AUPRC than Enformer on **all three CRISPRi validati
 
 ---
 
-## 10. Benchmark #2 — Recovery of eQTL-gene pairs (independent, orthogonal validation)
+## 10. Benchmark #2 Recovery of eQTL-gene pairs (independent, orthogonal validation)
 
 CRISPR screens are powerful but limited to a handful of cell types and artificially force the perturbation. **Expression quantitative trait loci (eQTLs)** are a completely different, "natural experiment" type of evidence: these are genetic variants found in real human populations that are statistically associated with changes in a nearby gene's expression, catalogued at large scale by the **GTEx (Genotype-Tissue Expression) project** across dozens of human tissues.
 
@@ -286,7 +286,7 @@ Because eQTL fine-mapping (figuring out exactly *which* variant among many corre
 
 ---
 
-## 11. Benchmark #3 — Application to real single-cell heart data
+## 11. Benchmark #3 Application to real single-cell heart data
 
 This is the "proof of concept" showing gABC actually works usefully on real single-cell epigenomic data, not just bulk CRISPR/eQTL validation sets.
 
@@ -336,7 +336,7 @@ When they repeated the gene expression prediction specifically restricted to onl
 
 ---
 
-## 12. Benchmark #4 — Runtime / computational efficiency
+## 12. Benchmark #4 Runtime / computational efficiency
 
 Since the whole point of extending ABC to single-cell data is practicality at scale (potentially thousands of cells or cell clusters, each needing its own scoring run), the authors also benchmarked the speed of their software implementation, called **STARE**.
 
@@ -346,6 +346,6 @@ Since the whole point of extending ABC to single-cell data is practicality at sc
 
 ---
 
-## 13. Summary of what gABC actually changed, in one paragraph
+## 13. Summary
 
 The original ABC model scored enhancer-gene pairs using (enhancer activity) × (contact frequency), normalized per gene. The gABC model makes two changes: first, it divides an enhancer's activity proportionally across every gene it's near (weighted by relative contact frequency to each), so a promiscuous enhancer near many genes no longer gets to "double count" its full activity for each one; second, it sums contact information across *every* annotated transcription start site of a gene instead of arbitrarily picking just one. These two changes, especially the TSS fix, produced a substantial and statistically significant average improvement of about 0.107 AUPRC points over three independent CRISPR-validated benchmark datasets, beat a large sequence-based deep learning model (Enformer), recovered more real eQTL-gene links from GTEx data, and — when combined with a companion tool (STARE) that summarizes transcription factor binding affinities per gene — produced better gene expression prediction models than either the original ABC score or a competing co-accessibility-based method, when applied to real single-cell heart tissue data. A key practical side-finding was that using just one chromatin accessibility assay (DNase-seq or ATAC-seq) instead of the two required by the original method gives nearly identical accuracy, which is what makes gABC realistically usable on single-cell data in the first place (since measuring two separate modalities in the same individual cell is very difficult with current technology).

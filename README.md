@@ -15,9 +15,7 @@ I’ll add Markdown tutorials, notes, and cheat sheets as I go.
 
 ## Structure
 
-- `README.md` – This file.
-- `PBS-HPC-cheatsheet.md` – PBS / HPC / Linux cheat sheet.
-- Future notes will be added as more `.md` files in the root (or in a `notes/` or `tutorials/` folder later).
+All notes are stored in wiki
 
 ## License
 

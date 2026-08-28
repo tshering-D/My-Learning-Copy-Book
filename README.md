@@ -16,7 +16,3 @@ I’ll add Markdown tutorials, notes, and cheat sheets as I go.
 ## Structure
 
 All notes are stored in wiki https://github.com/cerorziks/My-Learning-Copy-Book/wiki
-
-## License
-
-This is a personal learning repo. I’m happy for others to use it as long as you find anything useful in this.

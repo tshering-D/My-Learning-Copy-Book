@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Publish a folder of Obsidian notes to this repository's GitHub wiki.
+
+The folder is the source of truth: the wiki is made to match it exactly
+(new pages added, changed pages updated, pages deleted from the folder removed).
+
+    publish-wiki "path/to/vault/Learning Copy Book"            # publish
+    publish-wiki "path/to/vault/Learning Copy Book" --dry-run  # only show what would change
+
+The folder can also come from the LEARNING_BOOK_DIR environment variable.
+
+Conversions:
+  - "My Page.md"                        -> wiki page "My-Page"
+  - the note named like the folder      -> wiki "Home" page
+  - YAML frontmatter is removed; notes with `publish: false` are skipped
+  - Obsidian links [[Page]] / [[Page|text]] -> wiki links [[Page]] / [[text|Page]]
+    (code blocks are left untouched)
+"""
+import argparse
+import os
+import re
+import subprocess
+import sys
+
+WIKI_URL = "https://github.com/tshering-D/My-Learning-Copy-Book.wiki.git"
+# Keep the git checkout outside iCloud/Obsidian so the two sync systems never touch the same files
+CHECKOUT = os.path.expanduser("~/.cache/my-learning-copy-book-wiki")
+
+LINK = re.compile(r"\[\[([^\]\s|#][^\]|#]*)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]")
+
+
+def git(*args, capture=False):
+    result = subprocess.run(["git", "-C", CHECKOUT, *args], check=True, text=True,
+                            stdout=subprocess.PIPE if capture else None)
+    return result.stdout if capture else None
+
+
+def page_name(note_name: str, folder_name: str) -> str:
+    return "Home" if note_name == folder_name else note_name.replace(" ", "-")
+
+
+def split_frontmatter(text: str):
+    if text.startswith("---\n"):
+        end = text.find("\n---", 4)
+        if end != -1:
+            return text[4:end], text[end + 4:].lstrip("\n")
+    return "", text
+
+
+def convert_links(body: str, folder_name: str) -> str:
+    def repl(m):
+        target, label = m.group(1).strip(), m.group(2)
+        page = page_name(target, folder_name)
+        if label:
+            return f"[[{label}|{page}]]"
+        if page == "Home":
+            return f"[[{target}|Home]]"
+        return f"[[{target}]]"
+
+    out, in_code = [], False
+    for line in body.split("\n"):
+        if line.lstrip().startswith(("```", "~~~")):
+            in_code = not in_code
+        out.append(line if in_code else LINK.sub(repl, line))
+    return "\n".join(out)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Publish an Obsidian folder to the GitHub wiki.")
+    parser.add_argument("folder", nargs="?", default=os.environ.get("LEARNING_BOOK_DIR"))
+    parser.add_argument("--dry-run", action="store_true", help="Show changes without pushing")
+    args = parser.parse_args()
+
+    if not args.folder or not os.path.isdir(args.folder):
+        sys.exit("Give the notes folder as an argument or set LEARNING_BOOK_DIR.")
+    folder = os.path.abspath(args.folder)
+    folder_name = os.path.basename(folder.rstrip("/"))
+
+    if os.path.isdir(os.path.join(CHECKOUT, ".git")):
+        git("pull", "-q", "--ff-only")
+    else:
+        os.makedirs(os.path.dirname(CHECKOUT), exist_ok=True)
+        subprocess.run(["git", "clone", "-q", WIKI_URL, CHECKOUT], check=True)
+
+    # Build the new set of pages
+    pages = {}
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".md"):
+            if not name.startswith("."):
+                print(f"  skip (not a note): {name}")
+            continue
+        with open(os.path.join(folder, name), encoding="utf-8") as f:
+            frontmatter, body = split_frontmatter(f.read())
+        if re.search(r"^publish:\s*false\s*$", frontmatter, re.MULTILINE | re.IGNORECASE):
+            print(f"  skip (publish: false): {name}")
+            continue
+        if "![[" in body:
+            print(f"  warning: {name} embeds files with ![[...]]; embeds don't show on the wiki")
+        pages[page_name(name[:-3], folder_name) + ".md"] = convert_links(body, folder_name)
+
+    if "Home.md" not in pages:
+        print(f"  note: no '{folder_name}.md' note, so the wiki Home page will be removed")
+
+    # Make the checkout match exactly
+    for existing in os.listdir(CHECKOUT):
+        if existing.endswith(".md") and existing not in pages:
+            os.remove(os.path.join(CHECKOUT, existing))
+    for name, content in pages.items():
+        with open(os.path.join(CHECKOUT, name), "w", encoding="utf-8") as f:
+            f.write(content)
+
+    git("add", "-A")
+    changes = git("status", "--porcelain", capture=True).strip()
+    if not changes:
+        print("Wiki is already up to date.")
+        return
+    print("Changes:\n" + "\n".join("  " + line for line in changes.splitlines()))
+
+    if args.dry_run:
+        git("reset", "-q", "--hard", "HEAD")
+        print("Dry run: nothing published.")
+        return
+    git("commit", "-q", "-m", "Publish notes from Obsidian")
+    git("push", "-q")
+    print("Published: https://github.com/tshering-D/My-Learning-Copy-Book/wiki")
+
+
+if __name__ == "__main__":
+    main()
